@@ -1,6 +1,11 @@
 #Spotify Popularity Data https://www.kaggle.com/datasets/iamsumat/spotify-top-2000s-mega-dataset/data
+#This dataset contains audio statistics of the top 2000 tracks on Spotify. The data contains about 15 columns each 
+#describing the track and it's qualities from songs released from 1956 to 2019.
+
+#Research Question: Do inherent characteristics about songs make them more 'Popular'?
 library(corrplot)
 library(brms)
+library(ggplot2)
 set.seed(123)
 
 
@@ -57,6 +62,29 @@ par(mfrow = c(3, ceiling(sum(numeric_vars) / 3))) # Corrected the function to ce
 for (i in 1:ncol(numeric_data)) {
   hist(numeric_data[, i], main = names(numeric_data)[i], xlab = "", col = "skyblue", border = "white")}
 
+par(mfrow=c(1,1))
+
+# Plotting popularity over time with a linear fit line: it appears that older songs are more popular - could be due to just the duration of time allowed to more listens
+ggplot(data, aes(x = yrs_since_release, y = Popularity)) +
+  geom_point() +  # Scatter plot of popularity over time
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Linear fit line
+  labs(title = "Popularity of Songs vs Time since Release",
+       x = "Time Since Release",
+       y = "Popularity") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 20),
+        axis.title = element_text(size = 15))
+
+ggplot(data, aes(x = Year, y = Popularity)) +
+  geom_point() +  # Scatter plot of popularity over time
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Linear fit line
+  labs(title = "Popularity of Songs over Time",
+       x = "Year",
+       y = "Popularity") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 20),
+        axis.title = element_text(size = 15))
+###############################################################################
 #OLS
 # Assuming 'response_variable' is the dependent variable and 'predictor_variable1', 'predictor_variable2', etc. are the independent variables
 
@@ -77,7 +105,7 @@ plot(brm_model)
 stancode(brm_model)
 
 
-####################################
+###############################################################################
 
 #try diff prior than default
 custom_priors <- set_prior("normal(120, 5)", class = "b", coef = "BPM") +
@@ -104,8 +132,14 @@ summary(brm_model_custom_priors)
 plot(brm_model_custom_priors)
 stancode(brm_model_custom_priors)
 
-#######################################
+
+#Conclusion:Loudness, Speechiness and How many years since the song was released are the three variables most important for predicting its Popularity score.
+# It appears that audio attributes do not necessarily affect how popular a song becomes. 
+
+
+###############################################################################
 #####Try Latent
+# Lets see if there is some underlying factor that impacts the popularity score of songs?
 eigen(cor_matrix)$values
 
 plot(eigen(cor_matrix)$values, xlab = 'Eigenvalue Number', ylab = 'Eigenvalue Size', main = 'Scree Graph', type = 'b', xaxt = 'n')
@@ -119,10 +153,10 @@ print(fit, digits = 2, cutoff=.3, sort = TRUE)
 load = fit$loadings[,1:2] 
 plot(load,type="n") # set up plot
 text(load,labels=colnames(cor_matrix),cex=.7) # add variable names
-cat("It seems that the factor analysis results may not indicate a clear underlying latent factor structure that 
-    significantly impacts the observed correlations among the variables. The fit statistic (0.0497) suggests that 
-    the model does not fit the data very well. This further supports the notion that the identified factors may not 
-    adequately capture the underlying structure of the data.")
+#It seems that the factor analysis results may not indicate a clear underlying latent factor structure that significantly impacts 
+# the observed correlations among the variables. The fit statistic (0.0497) suggests that the model does not fit the data very well. 
+# This further supports the notion that the identified factors may not adequately capture the underlying structure of the data.
+#Maybe instead is it lyrics, some external famousness of the artist, backstory or emotional attachment to the lyrics that makes songs popular.
 
 
 #####Now Bayesian
