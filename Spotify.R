@@ -45,7 +45,7 @@ data$yrs_since_release <- 2019 - data$Year
 
 #EDA
 par(mfrow=c(1,1))
-cor_matrix <- cor(data[, 5:15])
+cor_matrix <- cor(data[, 6:16])
 corrplot(cor_matrix, method = "color", type = "upper", order = "hclust", 
          tl.col = "black", tl.srt = 45, diag = FALSE, addCoef.col = "black", number.cex = 0.6)
 
@@ -55,8 +55,7 @@ numeric_data <- data[, numeric_vars]
 par(mfrow = c(3, ceiling(sum(numeric_vars) / 3))) # Corrected the function to ceiling()
 
 for (i in 1:ncol(numeric_data)) {
-  hist(numeric_data[, i], main = names(numeric_data)[i], xlab = "", col = "skyblue", border = "white")
-}
+  hist(numeric_data[, i], main = names(numeric_data)[i], xlab = "", col = "skyblue", border = "white")}
 
 #OLS
 # Assuming 'response_variable' is the dependent variable and 'predictor_variable1', 'predictor_variable2', etc. are the independent variables
@@ -81,4 +80,70 @@ stancode(brm_model)
 ####################################
 
 #try diff prior than default
+custom_priors <- set_prior("normal(120, 5)", class = "b", coef = "BPM") +
+  set_prior("normal(50, 5)", class = "b", coef = "Energy") +
+  set_prior("normal(50, 5)", class = "b", coef = "Danceability") +
+  set_prior("normal(-10, 2)", class = "b", coef = "Loudness_db") + 
+  set_prior("normal(20, 5)", class = "b", coef = "Liveness") +
+  set_prior("normal(50, 5)", class = "b", coef = "Valence") +
+  set_prior("normal(120, 20)", class = "b", coef = "Duration") +
+  set_prior("normal(20, 5)", class = "b", coef = "Acousticness") +
+  set_prior("normal(10, 5)", class = "b", coef = "Speechiness") 
+
+
+# Bayesian estimation with custom priors
+brm_model_custom_priors <- brm(
+  Popularity ~ BPM + Energy + Danceability + Loudness_db + 
+    Liveness + Valence + Duration + Acousticness + Speechiness + yrs_since_release, 
+  data = data,
+  prior = custom_priors
+  # You can also add MCMC settings here if needed
+)
+
+summary(brm_model_custom_priors)
+plot(brm_model_custom_priors)
+stancode(brm_model_custom_priors)
+
+#######################################
+#####Try Latent
+eigen(cor_matrix)$values
+
+plot(eigen(cor_matrix)$values, xlab = 'Eigenvalue Number', ylab = 'Eigenvalue Size', main = 'Scree Graph', type = 'b', xaxt = 'n')
+axis(1, at = seq(1, 10, by = 1))
+abline(h = 1)
+
+(fit = factanal(factors = 5, covmat = cor_matrix))
+print(fit, digits = 2, cutoff=.3, sort = TRUE)
+
+# plot factor 1 by factor 2 
+load = fit$loadings[,1:2] 
+plot(load,type="n") # set up plot
+text(load,labels=colnames(cor_matrix),cex=.7) # add variable names
+cat("It seems that the factor analysis results may not indicate a clear underlying latent factor structure that 
+    significantly impacts the observed correlations among the variables. The fit statistic (0.0497) suggests that 
+    the model does not fit the data very well. This further supports the notion that the identified factors may not 
+    adequately capture the underlying structure of the data.")
+
+
+#####Now Bayesian
+#install.packages("blavaan")
+library("blavaan")
+spotify.latent.model <- ' Vivacity =~ Energy + Loudness_db + BPM 
+                          Wordiness =~ Acousticness + Speechiness
+                          Happy =~ Danceability + Valence
+                          Rawness =~ Liveness + Duration
+                          Age =~ yrs_since_release + Popularity'
+
+bfit <- bcfa(spotify.latent.model, data = data)
+summary(bfit)
+
+#HS.model <- ' visual =~ x1 + prior("normal(1,1)")*x2 + x3
+#verbal =~ x4 + x5 + x6 '
+#bfit <- bcfa(HS.model, data = HolzingerSwineford1939,
+#             dp = dpriors(lambda = "normal(1,5)"),
+#             burnin = 500, sample = 500, n.chains = 4,
+#             save.lvs = TRUE,
+#             bcontrol = list(cores = 4))
+#summary(bfit)
+
 
