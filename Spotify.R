@@ -11,6 +11,7 @@ set.seed(123)
 
 
 #setwd("C:/Users/JULIA_BLAKE/OneDrive - S&P Global/Columbia/Spring 2024/Bayesian/Final Project")
+setwd("C:/Users/julia/OneDrive/Documents/Columbia/Spring 2024/Bayesian (STAT5224)/Final Proj")
 data <- read.csv("Spotify-2000.csv")
 
 #Data Cleaning
@@ -77,7 +78,7 @@ ggplot(data, aes(x = yrs_since_release, y = Popularity)) +
 
 ggplot(data, aes(x = Year, y = Popularity)) +
   geom_point() +  # Scatter plot of popularity over time
-  geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Linear fit line
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Linear fit line
   labs(title = "Popularity of Songs over Time",
        x = "Year",
        y = "Popularity") +
@@ -104,6 +105,10 @@ summary(brm_model)
 plot(brm_model)
 stancode(brm_model)
 
+#found these functions
+pp_check(brm_model, ndraws = 100, type = 'ecdf_overlay')
+hypothesis(brm_model, 'Energy > 50')
+(waic1 = waic(brm_model))
 
 ###############################################################################
 
@@ -131,11 +136,14 @@ brm_model_custom_priors <- brm(
 summary(brm_model_custom_priors)
 plot(brm_model_custom_priors)
 stancode(brm_model_custom_priors)
-
+(waic2 = waic(brm_model_custom_priors))
 
 #Conclusion:Loudness, Speechiness and How many years since the song was released are the three variables most important for predicting its Popularity score.
 # It appears that audio attributes do not necessarily affect how popular a song becomes. 
 
+loo_compare(loo(brm_model), loo(brm_model_custom_priors))
+# Using loo with cross validation, it appears that the first model is better at predicting 
+#(Expected Log Predictive Density is higher).
 
 ###############################################################################
 #####Try Latent
@@ -162,11 +170,10 @@ text(load,labels=colnames(cor_matrix),cex=.7) # add variable names
 #####Now Bayesian
 #install.packages("blavaan")
 library("blavaan")
-spotify.latent.model <- ' Vivacity =~ Energy + Loudness_db + BPM 
-                          Wordiness =~ Acousticness + Speechiness
-                          Happy =~ Danceability + Valence
-                          Rawness =~ Liveness + Duration
-                          Age =~ yrs_since_release + Popularity'
+spotify.latent.model <- ' Vivacity =~ Energy + Loudness_db + BPM + Danceability + Valence 
+                          Wordiness =~ Acousticness + Speechiness + Liveness'
+
+#Rawness =~ Duration + yrs_since_release + Popularity
 
 bfit <- bcfa(spotify.latent.model, data = data)
 summary(bfit)
