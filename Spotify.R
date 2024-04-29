@@ -188,3 +188,48 @@ summary(bfit)
 #summary(bfit)
 
 
+
+###############################################################################
+#ADDING FROM LAST CLASS EXAMPLE
+# Step 3: Fit some Bayesian models
+# Option 1: manual computation
+# With Metropolis, assuming sigma = 1 (for simplicity)
+y<-data$Popularity 
+n<-length(y)
+X<-as.matrix(cbind(rep(1, n),data[, 5:14]))
+p<-dim(X)[2]
+pmn.beta<-rep(0,p) # prior expectation
+psd.beta<-rep(15,p) # prior sd
+
+var.prop<- var(y)*solve( t(X)%*%X ) # proposal variance
+
+beta<-rep(0,p) # starting value
+S<-10000 # number of iterations
+BETA<-matrix(0,nrow=S,ncol=p) # saved beta values
+acs<-0 # acceptances
+# set.seed(1) # initialize RNG
+
+for(s in 1:S)
+{
+  #propose a new beta
+  beta.p<- c(rmvnorm(1, beta, var.prop ))
+  # compute r
+  lhr<- sum(dnorm(y,(X%*%beta.p),log=T)) -
+    sum(dnorm(y,(X%*%beta),log=T)) +
+    sum(dnorm(beta.p,pmn.beta,psd.beta,log=T)) -
+    sum(dnorm(beta,pmn.beta,psd.beta,log=T))
+  # accept or reject
+  if( log(runif(1))< lhr ) { beta<-beta.p ; acs<-acs+1 }
+  BETA[s,]<-beta
+}
+
+# Check convergence
+apply(BETA,2,coda::effectiveSize)
+plot(BETA[,2], type = "l")
+# Discuss and if needed make changes to improve convergence
+
+#Results
+apply(BETA,2,mean)
+# Write here the equation, interpretation and discuss significance of predictors
+
+
